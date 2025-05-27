@@ -1,8 +1,10 @@
 from flask import Flask, request, jsonify
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import logging
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
 MODEL_NAME = "facebook/nllb-200-distilled-600M"
 print(f"Loading model {MODEL_NAME} ...")
