@@ -9,6 +9,7 @@ print(f"Loading model {MODEL_NAME} ...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 model = AutoModelForSeq2SeqLM.from_pretrained(MODEL_NAME)
 print("Model loaded.")
+print(tokenizer.lang_code_to_id.keys())
 
 @app.route("/translate", methods=["POST"])
 def translate():
