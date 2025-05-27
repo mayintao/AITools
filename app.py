@@ -1,20 +1,36 @@
-from flask import Flask, request, jsonify
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-import logging
 from flask_cors import CORS
+from flask import Flask, request, jsonify
+from transformers import MarianMTModel, MarianTokenizer
 
 app = Flask(__name__)
 CORS(app)
 
-MODEL_NAME = "facebook/nllb-200-distilled-600M"
-print(f"Loading model {MODEL_NAME} ...")
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-model = AutoModelForSeq2SeqLM.from_pretrained(MODEL_NAME)
-print("Model loaded.")
-print(tokenizer.lang_code_to_id.keys())
+# 支持的语言对及其模型
+MODEL_MAP = {
+    "zh-en": "Helsinki-NLP/opus-mt-zh-en",
+    "en-zh": "Helsinki-NLP/opus-mt-en-zh",
+    "zh-ja": "Helsinki-NLP/opus-mt-zh-ja",
+    "ja-zh": "Helsinki-NLP/opus-mt-ja-zh",
+    "zh-ko": "Helsinki-NLP/opus-mt-zh-ko",
+    "ko-zh": "Helsinki-NLP/opus-mt-ko-zh",
+    "zh-de": "Helsinki-NLP/opus-mt-zh-de",
+    "de-zh": "Helsinki-NLP/opus-mt-de-zh",
+}
 
-@app.route("/translate", methods=["POST"])
-def translate():
+# 模型缓存
+models = {}
+tokenizers = {}
+
+def load_model(model_name):
+    if model_name not in models:
+        tokenizer = MarianTokenizer.from_pretrained(model_name)
+        model = MarianMTModel.from_pretrained(model_name)
+        tokenizers[model_name] = tokenizer
+        models[model_name] = model
+    return tokenizers[model_name], models[model_name]
+
+@app.route("/text_translate", methods=["POST"])
+def text_translate():
     data = request.get_json()
     text = data.get("text", "")
     src_lang = data.get("src_lang", "")
@@ -23,21 +39,18 @@ def translate():
     if not text or not src_lang or not tgt_lang:
         return jsonify({"error": "text, src_lang, tgt_lang are required"}), 400
 
-    if src_lang not in tokenizer.lang_code_to_id or tgt_lang not in tokenizer.lang_code_to_id:
-        return jsonify({"error": "Unsupported source or target language"}), 400
+    lang_key = f"{src_lang}-{tgt_lang}"
+    model_name = MODEL_MAP.get(lang_key)
 
-    tokenizer.src_lang = src_lang
-    inputs = tokenizer(text, return_tensors="pt")
+    if not model_name:
+        return jsonify({"error": f"Translation from {src_lang} to {tgt_lang} is not supported."}), 400
 
     try:
-        translated_tokens = model.generate(
-            **inputs,
-            forced_bos_token_id=tokenizer.lang_code_to_id[tgt_lang],
-            max_new_tokens=256
-        )
-        translated_text = tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0]
+        tokenizer, model = load_model(model_name)
+        inputs = tokenizer([text], return_tensors="pt", padding=True)
+        translated = model.generate(**inputs, max_length=256)
+        translated_text = tokenizer.batch_decode(translated, skip_special_tokens=True)[0]
     except Exception as e:
-        logging.exception("Translation error")
         return jsonify({"error": str(e)}), 500
 
     return jsonify({
