@@ -1,7 +1,5 @@
-import io
 from PIL import Image
-import easyocr
-import torch
+from cnocr import CnOcr
 from flask_cors import CORS
 from flask import Flask, request, jsonify
 from transformers import MarianMTModel, MarianTokenizer
@@ -10,6 +8,7 @@ app = Flask(__name__)
 CORS(app)
 
 # 支持的语言对及其模型
+
 MODEL_MAP = {
     "zh-en": "Helsinki-NLP/opus-mt-zh-en",
     "en-zh": "Helsinki-NLP/opus-mt-en-zh",
@@ -24,7 +23,8 @@ MODEL_MAP = {
 # 模型缓存
 models = {}
 tokenizers = {}
-reader = easyocr.Reader(['ch_sim', 'en'], gpu=torch.cuda.is_available())
+# 初始化 OCR
+ocr = CnOcr()
 
 def load_model(model_name):
     if model_name not in models:
@@ -81,22 +81,28 @@ def translate_image():
     if not model_name:
         return jsonify({"error": f"Unsupported language pair: {lang_key}"}), 400
 
+    # 读取图片内容
     image = request.files["image"]
-    image = Image.open(image.stream).convert("RGB")
-    image_bytes = io.BytesIO()
-    image.save(image_bytes, format='JPEG')
-    image_bytes = image_bytes.getvalue()
-
     try:
-        result = reader.readtext(image_bytes, detail=0)
-        full_text = " ".join(result)
+        image = Image.open(image.stream).convert("RGB")
+    except Exception:
+        return jsonify({"error": "Invalid image format"}), 400
 
+    # OCR识别中文
+    try:
+        ocr_results = ocr.ocr(image)
+        full_text = "".join([line["text"] for line in ocr_results])
+    except Exception as e:
+        return jsonify({"error": f"OCR error: {str(e)}"}), 500
+
+    # 翻译处理
+    try:
         tokenizer, model = load_model(model_name)
-        inputs = tokenizer([full_text], return_tensors="pt", padding=True)
+        inputs = tokenizer(full_text, return_tensors="pt", padding=True, truncation=True)
         translated = model.generate(**inputs, max_length=256)
         translated_text = tokenizer.batch_decode(translated, skip_special_tokens=True)[0]
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Translation error: {str(e)}"}), 500
 
     return jsonify({
         "ocr_text": full_text,
