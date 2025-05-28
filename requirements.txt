@@ -1,7 +1,7 @@
 flask
 flask-cors
 transformers
-torch==2.0.1  # 可以删掉，让 transformers 自动装；或限制版本
+torch
 sentencepiece
 cnocr
 pillow
