@@ -1,8 +1,7 @@
-flask-cors
 flask
+flask-cors
 transformers
-torch  # Render 会自动安装依赖，建议你限制版本如：torch==2.0.1 或删掉，由 transformers 自动处理
+torch==2.0.1  # 可以删掉，让 transformers 自动装；或限制版本
 sentencepiece
-easyocr
+cnocr
 pillow
-opencv-python-headless  # 用于 easyocr 图像处理，避免 GUI 依赖
