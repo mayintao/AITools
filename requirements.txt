@@ -5,3 +5,6 @@ paddlepaddle
 transformers
 torch
 Pillow
+sentencepiece
+protobuf<4.0.0  # 避免 transformers/paddleocr 某些冲突
+python-dotenv>=1.0.0  # 如果你打算使用 .env 环境变量
