@@ -104,7 +104,7 @@ def translate_image(image_path: str, src_lang: str, tgt_lang: str):
             font_size = 20
             try:
                 # C:\Windows\Fonts
-                font = ImageFont.truetype("../font/simfang.ttf", font_size)
+                font = ImageFont.truetype("../simfang.ttf", font_size)
             except:
                 font = ImageFont.load_default()
 
