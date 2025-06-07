@@ -1,10 +1,8 @@
 flask
 flask-cors
+transformers
 paddleocr
 paddlepaddle
-transformers
-torch
-Pillow
 sentencepiece
-protobuf<4.0.0  # 避免 transformers/paddleocr 某些冲突
-python-dotenv>=1.0.0  # 如果你打算使用 .env 环境变量
+torch # 正确的 PyTorch 包名（CPU 版）
+Pillow
