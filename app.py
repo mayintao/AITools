@@ -302,4 +302,5 @@ def api_translate_image_status():
 preload_models()
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=7860)
+    port = int(os.environ.get("PORT", 10000))  # Render 默认 10000
+    app.run(host="0.0.0.0", port=port)
